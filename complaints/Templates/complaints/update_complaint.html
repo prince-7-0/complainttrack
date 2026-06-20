@@ -1,0 +1,65 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Update Complaint{% endblock %}
+{% block content %}
+<div class="form-card">
+  <div class="form-card-header">
+    <h2>Update Complaint <span class="unique-id-badge">{{ complaint.unique_id }}</span></h2>
+    <p>{{ complaint.title|capfirst }}</p>
+  </div>
+  <div class="complaint-preview">
+    <div class="preview-row">
+      <span class="preview-label">Raised By</span>
+      <span>{{ complaint.submitted_by.username|capfirst }}</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-label">Assigned To</span>
+      <span>{{ complaint.assigned_to.username|capfirst|default:"Unassigned" }}</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-label">Date</span>
+      <span>{{ complaint.created_at|date:"M d, Y H:i" }}</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-label">Description</span>
+      <span>{{ complaint.description }}</span>
+    </div>
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label>Status</label>
+      <select name="status" class="form-input">
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if complaint.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <p style="color:#64748b;font-size:.8rem;margin-top:.4rem;">
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label>Assigned to</label>
+      <select name="assigned_to" class="form-input">
+        <option value="">---------</option>
+        {% for eng in engineers %}
+          <option value="{{ eng.pk }}" {% if complaint.assigned_to == eng %}selected{% endif %}>
+            {{ eng.username|capfirst }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Admin notes</label>
+      <textarea name="admin_notes" rows="3" class="form-input"
+        placeholder="Add notes about this complaint...">{{ complaint.admin_notes }}</textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Save Changes</button>
+      <a href="{% url 'dashboard' %}" class="btn-secondary">Back</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

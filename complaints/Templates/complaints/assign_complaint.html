@@ -1,0 +1,42 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Assign Complaint{% endblock %}
+{% block content %}
+<div class="form-card">
+  <div class="form-card-header">
+    <h2>Assign Complaint <span class="unique-id-badge">{{ complaint.unique_id }}</span></h2>
+    <p>{{ complaint.title|capfirst }}</p>
+  </div>
+  <div class="complaint-preview">
+    <div class="preview-row">
+      <span class="preview-label">Current Status</span>
+      <span class="badge badge-{{ complaint.status }}">{{ complaint.get_status_display }}</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-label">Currently Assigned</span>
+      <span>{{ complaint.assigned_to.username|capfirst|default:"Unassigned" }}</span>
+    </div>
+    <div class="preview-row">
+      <span class="preview-label">Description</span>
+      <span>{{ complaint.description }}</span>
+    </div>
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Assign To Engineer</label>
+      <select name="assigned_to" class="form-input" required>
+        <option value="">-- Select Engineer --</option>
+        {% for eng in engineers %}
+          <option value="{{ eng.pk }}" {% if complaint.assigned_to == eng %}selected{% endif %}>
+            {{ eng.username|capfirst }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Assign Complaint</button>
+      <a href="{% url 'dashboard' %}" class="btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

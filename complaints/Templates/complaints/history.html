@@ -1,0 +1,109 @@
+{% extends 'complaints/base.html' %}
+{% block title %}My Complaint History{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h2>My Complaint History</h2>
+  <div style="display:flex; gap:.6rem;">
+    <button type="button" class="btn-secondary" data-bs-toggle="modal" data-bs-target="#exportModal">⬇ Export Report</button>
+    <a href="{% url 'dashboard' %}" class="btn-secondary">← Back</a>
+  </div>
+</div>
+<div class="table-responsive">
+<table class="complaints-table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Raised By</th>
+      <th>Assigned To</th>
+      <th>Priority</th>
+      <th>Status</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in complaints %}
+    <tr {% if c.is_canceled %}class="row-canceled"{% endif %}>
+      <td>{{ c.title|capfirst }}</td>
+      <td>{{ c.submitted_by.username|capfirst }}</td>
+      <td>{{ c.assigned_to.username|capfirst|default:"—" }}</td>
+      <td><span class="badge badge-priority-{{ c.priority }}">{{ c.get_priority_display }}</span></td>
+      <td><span class="badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+      <td>{{ c.created_at|date:"M d, Y" }} {{ c.created_at|time:"h:i A" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="empty">No history found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if complaints.has_other_pages %}
+<nav class="mt-3 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    {% if complaints.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ complaints.previous_page_number }}">← Prev</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">← Prev</span></li>
+    {% endif %}
+    {% for num in complaints.paginator.page_range %}
+      {% if complaints.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > complaints.number|add:'-3' and num < complaints.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+    {% if complaints.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ complaints.next_page_number }}">Next →</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Next →</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2a2d3e;color:#e2e8f0;">
+      <div class="modal-header" style="border-bottom:1px solid #2a2d3e;">
+        <h5 class="modal-title" style="color:#f97316;">Export Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="GET" action="{% url 'export_csv' %}">
+        <div class="modal-body">
+          <p style="color:#64748b;font-size:.85rem;margin-bottom:1rem;">
+            Leave fields blank to export all your records.
+          </p>
+
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority" class="form-input">
+              <option value="all">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>From Date</label>
+            <input type="date" name="date_from" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>To Date</label>
+            <input type="date" name="date_to" class="form-input">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #2a2d3e;">
+          <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-primary">Export</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ComplaintTrack{% endblock %}</title>
+  {% load static %}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕷</text></svg>">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    /* spinner */
+    #page-spinner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,12,18,.8);
+      z-index: 999999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    #page-spinner.show { display: flex; }
+    #page-spinner p { color: #94a3b8; font-size: .9rem; margin: 0; }
+
+    /* toast position */
+    .toast-wrap {
+      position: fixed;
+      top: 72px;
+      right: 20px;
+      z-index: 999998;
+      min-width: 290px;
+    }
+
+    /* bootstrap pagination dark override */
+    .pagination .page-link {
+      background: #1a1d27 !important;
+      border-color: #2a2d3e !important;
+      color: #e2e8f0 !important;
+    }
+    .pagination .page-link:hover {
+      background: #2a2d3e !important;
+      color: #f97316 !important;
+    }
+    .pagination .page-item.active .page-link {
+      background: #f97316 !important;
+      border-color: #f97316 !important;
+      color: #fff !important;
+    }
+    .pagination .page-item.disabled .page-link {
+      background: #1a1d27 !important;
+      border-color: #2a2d3e !important;
+      color: #64748b !important;
+    }
+
+    /* bootstrap toast dark override */
+    .toast {
+      background: #1a1d27 !important;
+      border: 1px solid #2a2d3e !important;
+      min-width: 290px;
+    }
+    .toast-header.success-h { background: #166534 !important; color: #fff !important; }
+    .toast-header.error-h   { background: #7f1d1d !important; color: #fff !important; }
+    .toast-header.warning-h { background: #78350f !important; color: #fff !important; }
+    .toast-header.info-h    { background: #1e3a5f !important; color: #fff !important; }
+    .toast-body-msg { color: #e2e8f0 !important; padding: .6rem 1rem; font-size: .9rem; }
+    .btn-close-white { filter: invert(1); }
+  </style>
+</head>
+<body>
+
+<!-- Spinner -->
+<div id="page-spinner">
+  <div class="spinner-border text-warning" style="width:3rem;height:3rem;" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+  <p>Loading, please wait...</p>
+</div>
+
+<!-- Toast Messages -->
+<div class="toast-wrap">
+  {% for message in messages %}
+  {% if 'success' in message.tags %}
+    {% with hclass='success-h' icon='✓ Success' %}
+    <div class="toast mb-2" role="alert" data-bs-autohide="true" data-bs-delay="4000">
+      <div class="toast-header {{ hclass }} border-0">
+        <strong class="me-auto">{{ icon }}</strong>
+        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body-msg">{{ message }}</div>
+    </div>
+    {% endwith %}
+  {% elif 'error' in message.tags or 'danger' in message.tags %}
+    {% with hclass='error-h' icon='⚠ Error' %}
+    <div class="toast mb-2" role="alert" data-bs-autohide="true" data-bs-delay="4000">
+      <div class="toast-header {{ hclass }} border-0">
+        <strong class="me-auto">{{ icon }}</strong>
+        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body-msg">{{ message }}</div>
+    </div>
+    {% endwith %}
+  {% elif 'warning' in message.tags %}
+    {% with hclass='warning-h' icon='⚡ Warning' %}
+    <div class="toast mb-2" role="alert" data-bs-autohide="true" data-bs-delay="4000">
+      <div class="toast-header {{ hclass }} border-0">
+        <strong class="me-auto">{{ icon }}</strong>
+        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body-msg">{{ message }}</div>
+    </div>
+    {% endwith %}
+  {% else %}
+    {% with hclass='info-h' icon='ℹ Notice' %}
+    <div class="toast mb-2" role="alert" data-bs-autohide="true" data-bs-delay="4000">
+      <div class="toast-header {{ hclass }} border-0">
+        <strong class="me-auto">{{ icon }}</strong>
+        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+      </div>
+      <div class="toast-body-msg">{{ message }}</div>
+    </div>
+    {% endwith %}
+  {% endif %}
+  {% endfor %}
+</div>
+
+{% if user.is_authenticated %}
+<nav class="navbar">
+  <a href="{% url 'dashboard' %}" class="brand">🕷 ComplaintTrack</a>
+  <div class="nav-links">
+    {% if user.is_staff %}
+      <a href="{% url 'add_engineer' %}" class="btn-nav-outline">+ New Engineer</a>
+    {% else %}
+    <a href="{% url 'complaint_history' %}" class="btn-nav-outline">My History</a>
+    {% endif %}
+    <span class="user-badge">
+      {% if user.is_staff %}🗣️ Admin{% else %}🖥️ Engineer{% endif %}
+    </span>
+    <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+  </div>
+</nav>
+{% endif %}
+
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // Show all toasts
+  document.querySelectorAll('.toast').forEach(function (el) {
+    bootstrap.Toast.getOrCreateInstance(el).show();
+  });
+
+  // Spinner on navigation
+  var spinner = document.getElementById('page-spinner');
+  document.querySelectorAll('a[href]').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var href = this.getAttribute('href');
+      if (!href || href === '#' || href.startsWith('http') ||
+          href.startsWith('mailto') || href.startsWith('javascript')) return;
+      spinner.classList.add('show');
+    });
+  });
+
+  // Hide spinner on back/forward
+  window.addEventListener('pageshow', function () {
+    document.getElementById('page-spinner').classList.remove('show');
+  });
+
+});
+</script>
+</body>
+</html>

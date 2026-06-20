@@ -1,0 +1,26 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Add Complaint{% endblock %}
+{% block content %}
+<div class="form-card">
+  <div class="form-card-header">
+    <h2>Submit New Complaint</h2>
+    <p>Fill in the details to log a new complaint</p>
+  </div>
+  <form method="POST">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="form-group">
+        <label>{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+          <span class="field-error">{{ field.errors.as_text }}</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Submit Complaint</button>
+      <a href="{% url 'dashboard' %}" class="btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

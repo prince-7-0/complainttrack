@@ -1,0 +1,203 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2>{% if is_admin %}All Complaints — All Engineers{% else %}My Complaints{% endif %}</h2>
+  <div style="display:flex; gap:.6rem;">
+    <button type="button" class="btn-secondary" data-bs-toggle="modal" data-bs-target="#exportModal">⬇ Export Report</button>
+    <a href="{% url 'add_complaint' %}" class="btn-primary">+ New Complaint</a>
+  </div>
+</div>
+
+<div class="stats-row">
+  <a href="?status=all" class="stat-card {% if not status_filter or status_filter == 'all' %}stat-active{% endif %}">
+    <span class="stat-number">{{ total }}</span>
+    <span class="stat-label">Total</span>
+  </a>
+  <a href="?status=open" class="stat-card open {% if status_filter == 'open' %}stat-active{% endif %}">
+    <span class="stat-number">{{ open_count }}</span>
+    <span class="stat-label">Open</span>
+  </a>
+  <a href="?status=assigned" class="stat-card progress {% if status_filter == 'assigned' %}stat-active{% endif %}">
+    <span class="stat-number">{{ assigned }}</span>
+    <span class="stat-label">Assigned</span>
+  </a>
+  <a href="?status=resolved" class="stat-card resolved {% if status_filter == 'resolved' %}stat-active{% endif %}">
+    <span class="stat-number">{{ resolved }}</span>
+    <span class="stat-label">Resolved</span>
+  </a>
+  <a href="?status=canceled" class="stat-card canceled {% if status_filter == 'canceled' %}stat-active{% endif %}">
+    <span class="stat-number">{{ canceled }}</span>
+    <span class="stat-label">Canceled</span>
+  </a>
+</div>
+
+<form method="GET" class="search-row">
+  {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+  <input type="text" name="search" value="{{ search_query }}"
+         placeholder="Search by title or ID (e.g. 060626MUM)"
+         class="search-input">
+
+  <select name="sort" class="form-input" style="max-width:200px;">
+    <option value="">Sort by Priority</option>
+    <option value="high_to_low" {% if sort_priority == 'high_to_low' %}selected{% endif %}>High → Low</option>
+    <option value="low_to_high" {% if sort_priority == 'low_to_high' %}selected{% endif %}>Low → High</option>
+  </select>
+
+  <button type="submit" class="btn-primary">Search</button>
+  {% if search_query or sort_priority %}
+    <a href="?{% if status_filter %}status={{ status_filter }}{% endif %}" class="btn-secondary">Clear</a>
+  {% endif %}
+</form>
+
+<div class="table-responsive">
+  <table class="complaints-table">
+    <thead>
+      <tr>
+        <th>CMPID</th>
+        <th>Title</th>
+        <th>Raised By</th>
+        <th>Assigned To</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in complaints %}
+      <tr {% if c.is_canceled %}class="row-canceled"{% endif %}>
+        <td><span class="unique-id">{{ c.unique_id }}</span></td>
+        <td>{{ c.title|capfirst }}</td>
+        <td>{{ c.submitted_by.username|capfirst }}</td>
+        <td>{{ c.assigned_to.username|capfirst|default:"— Unassigned —" }}</td>
+        <td><span class="badge badge-priority-{{ c.priority }}">{{ c.get_priority_display }}</span></td>
+        <td><span class="badge badge-{{ c.status }}">{{ c.get_status_display }}</span></td>
+        <td>{{ c.created_at|date:"M d, Y" }} {{ c.created_at|time:"h:i A" }}</td>
+        <td class="actions">
+          {% if c.is_canceled %}
+            <span style="color:#64748b;font-size:.8rem;">No actions</span>
+          {% else %}
+            <a href="{% url 'complaint_detail' c.pk %}" class="btn-action view">View</a>
+            {% if is_admin %}
+              <a href="{% url 'update_complaint' c.pk %}" class="btn-action edit">Update</a>
+              <button type="button" class="btn-action cancel"
+                data-url="{% url 'cancel_complaint' c.pk %}"
+                data-title="{{ c.title|capfirst }}"
+                onclick="showCancelModal(this.dataset.url, this.dataset.title)">Cancel</button>
+            {% else %}
+              <a href="{% url 'assign_complaint' c.pk %}" class="btn-action assign">Assign</a>
+            {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="empty">No complaints found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if complaints.has_other_pages %}
+<nav class="mt-3 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    {% if complaints.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ complaints.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_priority %}&sort={{ sort_priority }}{% endif %}">Prev</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Prev</span></li>
+    {% endif %}
+    {% for num in complaints.paginator.page_range %}
+      {% if complaints.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > complaints.number|add:'-3' and num < complaints.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_priority %}&sort={{ sort_priority }}{% endif %}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+    {% if complaints.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ complaints.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_priority %}&sort={{ sort_priority }}{% endif %}">Next</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Next</span></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2a2d3e;color:#e2e8f0;">
+      <div class="modal-header" style="border-bottom:1px solid #2a2d3e;">
+        <h5 class="modal-title" style="color:#ef4444;">Cancel Complaint</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p style="margin:0;">Are you sure you want to cancel complaint <strong id="cancelTitle"></strong>?</p>
+        <p style="color:#64748b;font-size:.85rem;margin-top:.5rem;">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #2a2d3e;">
+        <button type="button" class="btn-secondary" data-bs-dismiss="modal">No, Keep it</button>
+        <a id="cancelConfirmBtn" href="#" class="btn-danger"
+           style="padding:.5rem 1.2rem;border-radius:8px;text-decoration:none;">Yes, Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showCancelModal(url, title) {
+  document.getElementById('cancelTitle').textContent = title;
+  document.getElementById('cancelConfirmBtn').href = url;
+  new bootstrap.Modal(document.getElementById('cancelModal')).show();
+}
+</script>
+<!-- Export Date Range Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:#1a1d27;border:1px solid #2a2d3e;color:#e2e8f0;">
+      <div class="modal-header" style="border-bottom:1px solid #2a2d3e;">
+        <h5 class="modal-title" style="color:#f97316;">Export Report</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="GET" action="{% url 'export_csv' %}">
+      <div class="modal-body">
+        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+        {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+
+        <p style="color:#64748b;font-size:.85rem;margin-bottom:1rem;">
+          Leave fields blank to export all records{% if status_filter %} within the current status filter{% endif %}.
+        </p>
+
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" class="form-input">
+            <option value="all">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>From Date</label>
+          <input type="date" name="date_from" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input type="date" name="date_to" class="form-input">
+        </div>
+      </div>
+        <div class="modal-footer" style="border-top:1px solid #2a2d3e;">
+          <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-primary">Export</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
